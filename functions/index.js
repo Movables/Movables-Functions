@@ -93,7 +93,7 @@ exports.onPackageCreation = functions.firestore.document('packages/{packageID}')
                 'documentID': packageLogistics['author']['reference'].id,
             },
         },
-        'relation': {
+        'relations': {
             'count': {
                 'followers': packageRelations['count']['followers'],
                 'movers': packageRelations['count']['movers'],
