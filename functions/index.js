@@ -144,7 +144,7 @@ exports.onPackageCreation = functions.firestore.document('packages/{packageID}')
     }
     packageRecord['content']['recipient'] = packageRecipient;
 
-    // update pakcageRecord with content_template_by if it exists
+    // update pakcageRecord with in_transit_by if it exists
     if (packageLogistics.hasOwnProperty('in_transit_by')) {
         packageRecord['logistics']['in_transit_by'] = {
             'name': packageLogistics['in_transit_by']['name'],
@@ -152,6 +152,17 @@ exports.onPackageCreation = functions.firestore.document('packages/{packageID}')
         };
         if (packageLogistics['in_transit_by'].hasOwnProperty('pic_url')){
             packageRecord['logistics']['in_transit_by']['pic_url'] = packageLogistics['in_transit_by']['pic_url'];
+        }
+    }
+
+    // update packageRecord with content_template_by if it exists
+    if (packageLogistics.hasOwnProperty('content_template_by')) {
+        packageRecord['logistics']['content_template_by'] = {
+            'name': packageLogistics['content_template_by']['name'],
+            'documentID': packageLogistics['content_template_by']['reference'].id,
+        };
+        if (packageLogistics['content_template_by'].hasOwnProperty('pic_url')){
+            packageRecord['logistics']['content_template_by']['pic_url'] = packageLogistics['content_template_by']['pic_url'];
         }
     }
 
