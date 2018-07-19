@@ -57,7 +57,10 @@ exports.onPackageCreation = functions.firestore.document('packages/{packageID}')
     let packageRelations = packageData['relations'];
 
     var packageRecord = {
-        '_geoloc': packageLogistics['current_location'],
+        '_geoloc': {
+            'lat': packageLogistics['current_location'].latitude,
+            'lng': packageLogistics['current_location'].longitude,
+        },
         'content': {
             'category': packageContent['category'],
             'description': packageContent['description'],
