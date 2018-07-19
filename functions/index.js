@@ -50,7 +50,7 @@ exports.onTopicDeletion = functions.firestore.document('topics/{topicID}').onDel
 });
 
 // save package and logistics to algolia index when they are created
-exports.onPackageCreation = functions.firestore.document('packages/{packageID}').onCreate((snapshot, context) => {
+exports.onPackageCreation = functions.firestore.document('packages/{packageID}').onWrite((snapshot, context) => {
     const packageData = snapshot.data();
     let packageContent = packageData['content'];
     let packageLogistics = packageData['logistics'];
