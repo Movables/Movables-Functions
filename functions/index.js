@@ -26,8 +26,8 @@ exports.userLogout = functions.https.onCall((data, context) => {
 });
 
 // save topics to algolia when they are created
-exports.onTopicCreation = functions.firestore.document('topics/{topicID}').onWrite((snapshot, context) => {
-    const topicData = snapshot.data();
+exports.onTopicCreation = functions.firestore.document('topics/{topicID}').onWrite((change, context) => {
+    const topicData = change.after.data();
     var topic = {
         'count': {
             'packages': topicData['count']['packages'],
@@ -50,8 +50,8 @@ exports.onTopicDeletion = functions.firestore.document('topics/{topicID}').onDel
 });
 
 // save package and logistics to algolia index when they are created
-exports.onPackageCreation = functions.firestore.document('packages/{packageID}').onWrite((snapshot, context) => {
-    const packageData = snapshot.data();
+exports.onPackageCreation = functions.firestore.document('packages/{packageID}').onWrite((change, context) => {
+    const packageData = change.after.data();
     let packageContent = packageData['content'];
     let packageLogistics = packageData['logistics'];
     let packageRelations = packageData['relations'];
