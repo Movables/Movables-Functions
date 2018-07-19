@@ -26,7 +26,7 @@ exports.userLogout = functions.https.onCall((data, context) => {
 });
 
 // save topics to algolia when they are created
-exports.onTopicCreation = functions.firestore.document('topics/{topicID}').onCreate((snapshot, context) => {
+exports.onTopicCreation = functions.firestore.document('topics/{topicID}').onWrite((snapshot, context) => {
     const topicData = snapshot.data();
     var topic = {
         'count': {
