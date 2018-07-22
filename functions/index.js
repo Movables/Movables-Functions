@@ -17,7 +17,7 @@ const ALGOLIA_SEARCH_KEY = functions.config().algolia.search_key;
 
 const ALGOLIA_PACKAGES_INDEX_NAME = 'packages';
 const ALGOLIA_TOPICS_INDEX_NAME = 'topics';
-const ALGOLIA_TOPIC_CONVERSATION_INDEX_NAME = "topicConversations";
+const ALGOLIA_TOPIC_CONVERSATION_INDEX_NAME = "conversations";
 const client = algoliasearch(ALGOLIA_ID, ALGOLIA_ADMIN_KEY);
 
 exports.userLogout = functions.https.onCall((data, context) => {
@@ -246,7 +246,7 @@ exports.onPackageDeletion = functions.firestore.document('packages/{packageID}')
 // });
 
 // Update topic conversation index on conversation creation
-exports.onTopicConversationCreated = functions.firestore.document('topics/{topicId}/conversations/{conversationId}').onCreate((snapshot, context) => {
+exports.onConversationCreated = functions.firestore.document('topics/{topicId}/conversations/{conversationId}').onCreate((snapshot, context) => {
     const data = snapshot.data();
     const key = Object.keys(data["legislative_area"])[0];
     const value = data["legislative_area"][key];
@@ -257,4 +257,10 @@ exports.onTopicConversationCreated = functions.firestore.document('topics/{topic
     // Write to the algolia index
     const index = client.initIndex(ALGOLIA_TOPIC_CONVERSATION_INDEX_NAME);
     return index.saveObject(newConversation);
+});
+
+// remove topic from algolia index when it is deleted
+exports.onConversationDeletion = functions.firestore.document('topics/{topicID}/conversations/{conversationId}').onDelete((snapshot, context) => {
+    const index = client.initIndex(ALGOLIA_TOPIC_CONVERSATION_INDEX_NAME);
+    return index.deleteObject(context.params.conversationId);
 });
