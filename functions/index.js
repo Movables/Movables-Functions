@@ -188,9 +188,8 @@ exports.onConversationCreated = functions.firestore.document('topics/{topicId}/c
     const data = snapshot.data();
     const key = Object.keys(data["legislative_area"])[0];
     const value = data["legislative_area"][key];
-    var newConversation = {
-        key: value,
-    }
+    var newConversation = {};
+    newConversation[key] = value;
     newConversation.objectID = context.params.conversationID;
     // Write to the algolia index
     const index = client.initIndex(ALGOLIA_TOPIC_CONVERSATION_INDEX_NAME);
