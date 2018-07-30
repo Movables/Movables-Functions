@@ -223,39 +223,37 @@ exports.returnExpiredPackages =
             .then(function(snapshot){
                 let currentTransitRecord = snapshot.docs[0];
                 console.log("about to read transitRecord " + currentTransitRecord.ref.id);
+                console.log("time now: " + Date.now());
+                console.log("expire time: " + (currentTransitRecord.data()["pickup"]["date"].getTime() + 3600000));
                 if (Date.now() > (currentTransitRecord.data()["pickup"]["date"].getTime() + 3600000)) {
                     return db.runTransaction(function(transaction) {
-                        let currentTransitRecord = snapshot.docs[0];
-                        console.log("about to read transitRecord " + currentTransitRecord.ref.id);
-                        if (Date.now() > (currentTransitRecord.data()["pickup"]["date"].getTime() + 3600000)) {
-                            var lastLocation;
-                            if (snapshot.docs.length > 1) {
-                                let lastTransitRecord = snapshot.docs[1];
-                                lastLocation = lastTransitRecord["dropoff"]["geo_point"];
-                            } else {
-                                lastLocation = logistics["origin"]["geo_point"];
-                            }
-                            
-                            // remove current_package from logistics.in_transit_by's private profile
-                            transaction.update(inTransitByRef, {"private_profile.current_package": FieldValue.delete()});
-        
-                            // remove transit_record associated with logistics.in_transit_by
-                            transaction.delete(packageInTransit.ref.collection("transit_record").doc(packageInTransit.ref.id));
-        
-                            // set logistics.current_location to the most second most recent transit_record if it exists
-                            // otherwise set logistics.current_location to origin location
-                            // set logistics.status to pending on packageInTransit
-                            // remove logistics.in_transit_by from packageInTransit
-                            transaction.update(packageInTransit.ref, {
-                                "logistics.status": "pending", 
-                                "logistics.in_transit_by": FieldValue.delete(), 
-                                "logistics.current_location": lastLocation
-                            });
-                            return "updated package:" + packageInTransitData["content"]["headline"];
+                        var lastLocation;
+                        if (snapshot.docs.length > 1) {
+                            let lastTransitRecord = snapshot.docs[1];
+                            lastLocation = lastTransitRecord["dropoff"]["geo_point"];
+                        } else {
+                            lastLocation = logistics["origin"]["geo_point"];
                         }
+                        
+                        // remove current_package from logistics.in_transit_by's private profile
+                        transaction.update(inTransitByRef, {"private_profile.current_package": FieldValue.delete()});
+    
+                        // remove transit_record associated with logistics.in_transit_by
+                        transaction.delete(packageInTransit.ref.collection("transit_records").doc(packageInTransit.ref.id));
+    
+                        // set logistics.current_location to the most second most recent transit_record if it exists
+                        // otherwise set logistics.current_location to origin location
+                        // set logistics.status to pending on packageInTransit
+                        // remove logistics.in_transit_by from packageInTransit
+                        transaction.update(packageInTransit.ref, {
+                            "logistics.status": "pending", 
+                            "logistics.in_transit_by": FieldValue.delete(), 
+                            "logistics.current_location": lastLocation
+                        });
+                        return Promise.resolve("updated package: " + packageInTransitData["content"]["headline"]);
                     })
                     .then(function(message){
-                        return consoloe.log(message);
+                        return console.log(message);
                     })
                     .catch(function(err){
                         console.error(err);
