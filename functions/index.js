@@ -2,6 +2,7 @@ const admin = require('firebase-admin');
 const functions = require('firebase-functions');
 const geolib = require('geolib');
 const algoliasearch = require('algoliasearch');
+const FieldValue = require('firebase-admin').firestore.FieldValue;
 
 admin.initializeApp(functions.config().firebase);
 
@@ -201,3 +202,75 @@ exports.onConversationDeletion = functions.firestore.document('topics/{topicID}/
     const index = client.initIndex(ALGOLIA_TOPIC_CONVERSATION_INDEX_NAME);
     return index.deleteObject(context.params.conversationID);
 });
+
+exports.returnExpiredPackages =
+  functions.pubsub.topic('minute-tick').onPublish((event) => {
+    console.log("This job is ran every minute!")
+    db.collection("packages").where("logistics.status", "==", "transit")
+    .get()
+    .then(function(querySnapshot) {
+        console.log("packages are " + querySnapshot.docs.length);
+        return querySnapshot.forEach(function(doc) {
+            let packageInTransit = doc;
+            let packageInTransitData = doc.data();
+
+            let logistics = packageInTransitData["logistics"];
+            let inTransitByRef = logistics["in_transit_by"]["reference"];
+
+            console.log("about to process " + packageInTransitData["content"]["headline"]);
+
+            packageInTransit.ref.collection("transit_records").orderBy("pickup.date").limit(2).get()
+            .then(function(snapshot){
+                let currentTransitRecord = snapshot.docs[0];
+                console.log("about to read transitRecord " + currentTransitRecord.ref.id);
+                if (Date.now() > (currentTransitRecord.data()["pickup"]["date"].getTime() + 3600000)) {
+                    return db.runTransaction(function(transaction) {
+                        let currentTransitRecord = snapshot.docs[0];
+                        console.log("about to read transitRecord " + currentTransitRecord.ref.id);
+                        if (Date.now() > (currentTransitRecord.data()["pickup"]["date"].getTime() + 3600000)) {
+                            var lastLocation;
+                            if (snapshot.docs.length > 1) {
+                                let lastTransitRecord = snapshot.docs[1];
+                                lastLocation = lastTransitRecord["dropoff"]["geo_point"];
+                            } else {
+                                lastLocation = logistics["origin"]["geo_point"];
+                            }
+                            
+                            // remove current_package from logistics.in_transit_by's private profile
+                            transaction.update(inTransitByRef, {"private_profile.current_package": FieldValue.delete()});
+        
+                            // remove transit_record associated with logistics.in_transit_by
+                            transaction.delete(packageInTransit.ref.collection("transit_record").doc(packageInTransit.ref.id));
+        
+                            // set logistics.current_location to the most second most recent transit_record if it exists
+                            // otherwise set logistics.current_location to origin location
+                            // set logistics.status to pending on packageInTransit
+                            // remove logistics.in_transit_by from packageInTransit
+                            transaction.update(packageInTransit.ref, {
+                                "logistics.status": "pending", 
+                                "logistics.in_transit_by": FieldValue.delete(), 
+                                "logistics.current_location": lastLocation
+                            });
+                            return "updated package:" + packageInTransitData["content"]["headline"];
+                        }
+                    })
+                    .then(function(message){
+                        return consoloe.log(message);
+                    })
+                    .catch(function(err){
+                        console.error(err);
+                    });
+                } else {
+                    return console.log("transit still valid");
+                }
+            })
+            .catch(function(err){
+                console.error(err);
+            });
+        });
+        // return Promise.reject("Sorry! return operation failed");
+    })
+    .catch(function(error) {
+        console.log("Error getting documents: ", error);
+    });
+  });
